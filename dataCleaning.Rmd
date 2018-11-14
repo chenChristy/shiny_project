@@ -1,0 +1,150 @@
+---
+title: "Shiny_dataCleaning"
+author: "Chen Gao"
+date: "10/28/2018"
+output: html_document
+---
+
+## Clean the data
+### Import the data and libraries
+```{r}
+library(dplyr)
+library(MASS)
+df <- read.csv("/Users/gaochen/Desktop/shiny_G43419928/directory.csv", stringsAsFactors = FALSE)
+```
+
+### Overview the dataset
+```{r}
+str(df)
+summary(df)
+```
+
+### Deal with the missing value in column 'Longitude'and 'Latitude'
+
+```{r}
+missingV<-subset(df,is.na(Longitude))
+# The missing value City is Seoul,Country is KR, Postcode is 153-023.
+```
+
+```{r}
+Seoul_data <-filter(df,(City=='Seoul'&Postcode=='153-023'))
+```
+
+We use the average to fill in the missing value.
+
+```{r}
+df[8029,'Longitude'] <- mean(Seoul_data$Longitude, na.rm = T)
+df[8029,'Latitude'] <- mean(Seoul_data$Latitude, na.rm = T)
+```
+ 
+### Remove unused columns:'Store.Number','Phone.Number','Postcode'.
+
+```{r}
+df<- subset(df, select = -c(Store.Number,Phone.Number,Postcode))
+```
+
+### Convert 'Brand','Ownership.Type' to category variable.
+
+```{r}
+table(df$Brand)
+table(df$Ownership.Type)
+```
+
+```{r}
+df$Brand<-factor(df$Brand,levels=c('Starbucks','Teavana','Coffee House Holdings','Evolution Fresh'))
+df$Ownership.Type<- factor(df$Ownership.Type,levels=c('Licensed','Joint Venture','Franchise','Company Owned'))
+```
+
+### Check the dataset again
+```{r}
+str(df)
+summary(df)
+```
+
+### Create a new column named 'Continent'.
+```{r}
+Continent<-''
+df<-cbind(df[,1:8],Continent,df[,9:10])
+df$Continent<-ifelse(df$Country %in% c('AE','AZ','BH','BN','CN','CY','ID','IN','JO','JP','KH','KR','KW','KZ','LB','MY','OM','PH','QA','SA','SG','TH','TR','TW','VN'),'Asia',ifelse(df$Country%in% c('AD','AT','BE','BG','CH','CZ','DE','DK','ES','FI','FR','GB','GR','HU','IE','LU','NL','NO','PL','PT','RO','RU','SE','SK'),'Europe',ifelse(df$Country%in% c('AR','AW','BO','BR','BS','CA','CL','CO','CR','CW','GT','MX','PA','PE','PR','SV','TT','US'),'America',ifelse(df$Country%in% c('AU'),'Australia',ifelse(df$Country%in% c('EG','MA','ZA'),'Africa','Pacific')))))
+```
+
+```{r}
+table(df$Continent)
+```
+
+```{r}
+write.csv(df,file="/Users/gaochen/Desktop/shiny_G43419928/cleanData.csv",quote=T,row.names = T)
+```
+
+
+## Explore the data
+
+####The Brands of Starbucks
+```{r}
+library(ggplot2)
+
+ggplot(df,aes(x=Brand,fill=Brand))+
+  geom_bar()
+```
+
+####Which country has the highest number of Starbucks stores 
+
+The top 10 countries that have the highest number of Starbucks stores 
+```{r}
+top_countires<- df %>% 
+  filter(Brand=="Starbucks")%>%
+  group_by(Country) %>%
+  summarise(Count= n()) %>% 
+  arrange(desc(Count)) %>% top_n(n=10)
+
+ggplot(top_countires, aes(x=Country, y=Count))+
+  geom_bar(stat="identity",fill='green4')+
+  labs(title='Top 10 Countries with Most Number of Starbucks Stores')
+```
+
+
+```{r}
+top_countires<- df %>% 
+  filter(Brand=="Starbucks")%>%
+  group_by(Country) %>%
+  summarise(Count= n()) %>% 
+  arrange(desc(Count)) %>% top_n(n=10)
+
+top_countires
+```
+
+
+####Which city has the highest number of Starbucks stores 
+
+```{r}
+top_cities<- df %>% 
+  filter(Brand=="Starbucks")%>%
+  group_by(City) %>%
+  summarise(Count= n()) %>% 
+  arrange(desc(Count)) %>% top_n(n=10)
+
+ggplot(top_cities, aes(x=City, y= Count))+
+  geom_bar(stat="identity",fill='green4')+
+  theme(text = element_text(family = "STHeiti"))+   # Show Chinese in ggplot plots
+  labs(title='Top 10 Cities with Most Number of Starbucks Stores')
+```
+
+I decided to plot a world map of Starbucks locations to find out where they have the most and do not have locations at all.Not surprisingly, the most number of locations are in U.S and then in Western Europe. Also, there are many location in Eastern Asia. They have one location in Africa, which is their capital. Also, they have some locations in Australia and Russia and couple of ones in Southern America.
+
+```{r}
+cityrank<-df %>% 
+  filter(Brand=="Starbucks" & Country=="US") %>% 
+  group_by(City)%>%
+  summarize(Count= n())%>% 
+  arrange(desc(Count))%>% top_n(n=10)
+
+ggplot(cityrank, aes(x=factor(City,levels=City), y=Count))+ 
+  geom_point(size=5, color="green4")+
+  geom_segment(aes(x=City, 
+                         xend=City, 
+                         y=0, 
+                         yend=Count),size=2,col="darkgoldenrod3")+
+  labs(title="Top10 Cities in USA - Starbucks",x="City" )+
+  theme(axis.text.x = element_text(angle=90, vjust=0.6))
+  options(repr.plot.width=7, repr.plot.height=5)
+```
