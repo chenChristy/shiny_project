@@ -1,5 +1,5 @@
 # shiny_project
-my_first_shiny_project
+
 In this project, I use dataset 'Starbucks Locations Worldwide' from Kaggle. 
 (Link: https://www.kaggle.com/starbucks/store-locations) 
 
